@@ -12,14 +12,36 @@ class LexerSuite extends munit.FunSuite {
     result match {
       case Progress.Empty(Result.Ok((tokens, _)))    => tokens
       case Progress.Consumed(Result.Ok((tokens, _))) => tokens
-      case Progress.Empty(Result.Failed(msg))        => sys.error(s"Lexer failed: $msg")
-      case Progress.Consumed(Result.Failed(msg))     => sys.error(s"Lexer failed: $msg")
+      case Progress.Empty(Result.Failed(msg))    => throw new RuntimeException(s"Lexer failed: $msg")
+      case Progress.Consumed(Result.Failed(msg)) => throw new RuntimeException(s"Lexer failed: $msg")
     }
   }
 
-  test("lexes a single keyword") {
+  test("lexes a single keyword (for)") {
     val tokens = runLex("for")
     assertEquals(tokens, List(LToken.ForKW(SrcLoc(1, 3))))
+  }
+
+  test("lexes a single keyword (while)") {
+    val tokens = runLex("while")
+    assertEquals(tokens, List(LToken.WhileKW(SrcLoc(1, 5))))
+  }
+
+  test("lexes an identifier with keyword in name") {
+    val tokens = runLex("while_happy")
+    assertEquals(tokens, List(LToken.IdTok(SrcLoc(1, 11), "while_happy")))
+  }
+
+  test("lexes a keyword multiple whitespaces and an identifier") {
+    val tokens = runLex("for    i")
+    assertEquals(tokens, List(
+      LToken.ForKW(SrcLoc(1, 3)),
+      LToken.WhiteSpace(SrcLoc(1,4),' '),
+      LToken.WhiteSpace(SrcLoc(1,5),' '),
+      LToken.WhiteSpace(SrcLoc(1,6),' '),
+      LToken.WhiteSpace(SrcLoc(1,7),' '),
+      LToken.IdTok(SrcLoc(1,8), "i")
+    ))
   }
 
   test("lexes an identifier (foobar)") {
@@ -37,7 +59,7 @@ class LexerSuite extends munit.FunSuite {
     assertEquals(tokens, List(LToken.IntTok(SrcLoc(1, 3), 123)))
   }
 
-  test("lexes an integer exp") {
+  test("lexes an integer exp (123+321)") {
     val tokens = runLex("123+321")
     assertEquals(tokens, List(
       LToken.IntTok(SrcLoc(1, 3), 123),
@@ -46,9 +68,26 @@ class LexerSuite extends munit.FunSuite {
     ))
   }
 
-  test("lexes a float literal") {
-    val tokens = runLex("3.14")
-    assertEquals(tokens, List(LToken.FloatTok(SrcLoc(1, 4), 3.14)))
+  test("lexes an integer float exp (123+3.5463245342 * (5-2))") {
+    val tokens = runLex("123+3.5463245342 * (5-2)")
+    assertEquals(tokens, List(
+      LToken.IntTok(SrcLoc(1, 3),123),
+      LToken.PlusSign(SrcLoc(1,4)),
+      LToken.FloatTok(SrcLoc(1, 16),3.5463245342),
+      LToken.WhiteSpace(SrcLoc(1,17),' '),
+      LToken.AsterixSign(SrcLoc(1,18)),
+      LToken.WhiteSpace(SrcLoc(1,19),' '),
+      LToken.LParen(SrcLoc(1,20)),
+      LToken.IntTok(SrcLoc(1,21),5),
+      LToken.MinusSign(SrcLoc(1,22)),
+      LToken.IntTok(SrcLoc(1,23),2),
+      LToken.RParen(SrcLoc(1,24))
+    ))
+  }
+
+  test("lexes a float literal (3.146782345)") {
+    val tokens = runLex("3.146782345")
+    assertEquals(tokens, List(LToken.FloatTok(SrcLoc(1, 11), 3.146782345)))
   }
 
   test("lexes an operator") {
@@ -96,11 +135,52 @@ class LexerSuite extends munit.FunSuite {
     ))
   }
 
-  test("Test") {
-  val tokens = runLex("%%%%%")
-  assertEquals(tokens, List(
-    LToken.WhiteSpace(SrcLoc(1,1), ' ')
-  ))
+  test("string literal: plain text") {
+    val tokens = runLex("\"hello\"")
+    assertEquals(tokens.head, LToken.StringTok(SrcLoc(1,7), "hello"))
+  }
+
+  test("string literal: empty string") {
+    val tokens = runLex("\"\"")
+    assertEquals(tokens.head, LToken.StringTok(SrcLoc(1,2), ""))
+  }
+
+  test("string literal: with spaces") {
+    val tokens = runLex("\"hello world\"")
+    assertEquals(tokens.head, LToken.StringTok(SrcLoc(1,13), "hello world"))
+  }
+
+  test("string literal: with punctuation") {
+    val tokens = runLex("\"hello, world!\"")
+    assertEquals(tokens.head, LToken.StringTok(SrcLoc(1,15), "hello, world!"))
+  }
+
+  test("lexer should fail on unexpected character") {
+    val ex = intercept[RuntimeException] {
+      runLex("$foo") // '$' not valid start for identifier
+    }
+    println(ex.getMessage) 
+  }
+
+  test("lexer should fail on unterminated string") {
+    val ex = intercept[RuntimeException] {
+      runLex("\"hello") // no closing quote
+    }
+    println(ex.getMessage) 
+  }
+
+  test("lexer should fail on invalid float literal") {
+    val ex = intercept[RuntimeException] {
+      runLex("123.") // not resolved float, EOF afterwards
+    }
+    println(ex.getMessage) 
+  }
+
+  test("lexer should fail on invalid binary literal") {
+    val ex = intercept[RuntimeException] {
+      runLex("0b2101") // invalid digit '2' in binary
+    }
+    println(ex.getMessage) 
   }
 
 }

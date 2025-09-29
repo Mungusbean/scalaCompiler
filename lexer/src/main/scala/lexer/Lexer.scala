@@ -2,7 +2,6 @@ package lexer
 
 import LToken.*
 import parsec.Parsec.*
-import monad.Monad.MonadError
 
 object Lexer {
 
@@ -35,12 +34,6 @@ object Lexer {
         }
     }
 
-    // def lexOne(using pe:ParserEnv[LEnv, Char])(using acc: String):Parser[LEnv, LToken] = for {
-    //     c <- sat((c:Char) => isValidLexemeChar(c))
-    //     ln <- get(lenv => pe.getLine(lenv))
-    //     cl <- get(lenv => pe.getCol(lenv))
-    // } yield emitToken(ln, cl, c)
-
     def lexChar(using pe: ParserEnv[LEnv, Char]): Parser[LEnv, (Char, Int, Int)] =
       for {
         c  <- sat((c: Char) => isValidLexemeChar(c))
@@ -49,29 +42,30 @@ object Lexer {
       } yield (c, ln, cl)
 
     def lex( acc: String = "", lastValid: Option[LToken] = None)(using pe: ParserEnv[LEnv, Char]): Parser[LEnv, List[LToken]] =
+        given curr_acc:String = acc
         for {
           maybeC <- lookAhead(optional(item))
           tokens <- maybeC match {
-            case Right(c: Char) if isValidToken(c)(using acc) =>
-              // valid: now actually consume
-              for {
+            // valid: now actually consume
+            case Right(c: Char) if isValidToken(c) => for {
                 (c1, ln, cl) <- lexChar // consume
-                tok = emitToken(ln, cl, c1)(using acc)
-                rest <- lex(acc + c1, Some(tok))
+                rest <- lex(acc + c1, Some(emitToken(ln, cl, c1))) // update acc and store last valid token. Continue munching
               } yield rest
 
-            case Right(_) =>
-              // invalid extension
+            // invalid extension
+            case Right(c: Char) =>
               lastValid match {
-                case Some(tok) => for { rest <- lex("", None) } yield tok :: rest
-                case None      => empty(Nil)
+                case Some(UnResolvedTok(srcloc, lexeme)) => lexError(InvalidNumber(lexeme, srcloc.ln, srcloc.cl)) // encountered an invalid exstension and our last token was unresolved TODO: find a way to change the error
+                case Some(tok) => for { rest <- lex("", None) } yield tok :: rest // actually prepend the token
+                case None      => lexError(UnexpectedChar(c, 1, 1)) // catastrophic failure // TODO find a way to get the LEnv into there for the current line
               }
 
+            // EOF
             case Left(_) =>
-              // EOF
               lastValid match {
-                case Some(tok) => empty(List(tok))
-                case None      => empty(Nil)
+                case Some(UnResolvedTok(srcloc, lexeme)) => lexError(InvalidNumber(lexeme, srcloc.ln, srcloc.cl)) // we reached EOF and our last token couldn't be resolved
+                case Some(tok) => empty(List(tok)) 
+                case None      => lexError(UnexpectedChar('\u0000', 1, 1)) // catastrophic failure
               }
           }
         } yield tokens
