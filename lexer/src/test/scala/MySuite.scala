@@ -12,8 +12,8 @@ class LexerSuite extends munit.FunSuite {
     result match {
       case Progress.Empty(Result.Ok((tokens, _)))    => tokens
       case Progress.Consumed(Result.Ok((tokens, _))) => tokens
-      case Progress.Empty(Result.Failed(msg))    => throw new RuntimeException(s"Lexer failed: $msg")
-      case Progress.Consumed(Result.Failed(msg)) => throw new RuntimeException(s"Lexer failed: $msg")
+      case Progress.Empty(Result.Failed(msg))    => throw new RuntimeException(s"Lexer failed:\n$msg")
+      case Progress.Consumed(Result.Failed(msg)) => throw new RuntimeException(s"Lexer failed:\n$msg")
     }
   }
 
@@ -157,7 +157,14 @@ class LexerSuite extends munit.FunSuite {
 
   test("lexer should fail on unexpected character") {
     val ex = intercept[RuntimeException] {
-      runLex("$foo") // '$' not valid start for identifier
+      runLex("foo_bar\n(123874)$") // $ not a valid char
+    }
+    println(ex.getMessage) 
+  }
+
+  test("lexer should fail on unexpected character") {
+    val ex = intercept[RuntimeException] {
+      runLex("$foo_bar") // $ not valid start for identifier
     }
     println(ex.getMessage) 
   }

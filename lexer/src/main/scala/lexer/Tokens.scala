@@ -2,6 +2,7 @@ package lexer
 
 import scala.compiletime.ops.float
 import scala.compiletime.ops.double
+import lexer.Lexer.LEnv
 
 case class SrcLoc(val ln: Int, val cl: Int)
 
@@ -84,7 +85,7 @@ enum LToken {
     * OR
     * Must fufill some predicate or rule but can only be resolved later.
     */
-    case UnResolvedTok(src:SrcLoc, v:String)
+    case UnResolvedTok(src:SrcLoc, v:String, mkError: (String, LEnv) => LexError)
 
     // ========================= WhiteSpaces ===================================
     // [\n, \t, \s]
@@ -94,7 +95,8 @@ enum LToken {
 
 final case class LTokenRule(
     isPartial: String => Boolean,
-    isResolved: String => Boolean
+    isResolved: String => Boolean,
+    mkError: (String, LEnv) => LexError
 )
 
 import LToken.*
@@ -176,7 +178,7 @@ def srcLoc(tok: LToken):SrcLoc = tok match {
     * OR
     * Must fufill some predicate or rule but can only be resolved later.
     */
-    case UnResolvedTok(src, value) => src
+    case UnResolvedTok(src, value, mkError) => src
 
     // ========================= WhiteSpaces ===================================
     // [\n, \t, \r, \f, " "]
@@ -259,7 +261,8 @@ val intRule = LTokenRule(
   isResolved = s =>
     s.matches("""^[0-9]+$""") ||              // decimal
     s.matches("""^0x[0-9a-fA-F]+$""") ||      // hex (must have at least one digit)
-    s.matches("""^0b[01]+$""")                // binary (must have at least one digit)
+    s.matches("""^0b[01]+$"""),               // binary (must have at least one digit)
+  mkError = InvalidNumber.apply
 )
 
 val floatRule = LTokenRule(
@@ -272,14 +275,16 @@ val floatRule = LTokenRule(
     s.matches("""^[0-9]+E[+-]?$"""),                     // integer with E+ or E-, waiting for digits
   isResolved = s =>
     s.matches("""^[0-9]*\.[0-9]+(E[+-]?[0-9]+)?$""") ||  // decimal float with optional exponent
-    s.matches("""^[0-9]+E[+-]?[0-9]+$""")                // scientific notation without decimal
+    s.matches("""^[0-9]+E[+-]?[0-9]+$"""),               // scientific notation without decimal
+  mkError = InvalidNumber.apply
 )
 
 val stringRule = LTokenRule(
   isPartial = s =>
     s.matches("""^"[^"]*"?$"""),       // opened quote, not yet closed
   isResolved = s =>
-    s.matches("""^"[^"]*"$""")       // properly closed quote
+    s.matches("""^"[^"]*"$"""),        // properly closed quote
+  mkError = UnterminatedString.apply
 )
 
 val LTokenRules: List[LTokenRule] = List(
@@ -337,8 +342,12 @@ def emitToken(ln: Int, cl: Int, c: Char)(using acc: String): LToken = {
     if (curr_acc.length == 1 && WHITESPACES.contains(curr_acc.head)) return WHITESPACES(curr_acc.head)(srcloc)
 
     // Valid UnResolved states
-    if (LTokenRules.exists(_.isPartial(curr_acc))) 
-        return UnResolvedTok(srcloc, curr_acc)
+    // if (LTokenRules.exists(_.isPartial(curr_acc))) 
+    //     return UnResolvedTok(srcloc, curr_acc)
+    LTokenRules.find(_.isPartial(curr_acc)) match {
+      case None => None
+      case Some(rule) => return UnResolvedTok(srcloc, curr_acc, rule.mkError)
+    }
 
     // Final fallback
     sys.error(s"emitToken: unrecognized token '$curr_acc' at $ln:$cl")

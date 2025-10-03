@@ -55,17 +55,17 @@ object Lexer {
             // invalid extension
             case Right(c: Char) =>
               lastValid match {
-                case Some(UnResolvedTok(srcloc, lexeme)) => lexError(InvalidNumber(lexeme, srcloc.ln, srcloc.cl)) // encountered an invalid exstension and our last token was unresolved TODO: find a way to change the error
+                case None      => lexError("", (_, env) => UnexpectedChar(c, env)) // catastrophic failure // TODO find a way to get the LEnv into there for the current line
+                case Some(UnResolvedTok(srcloc, lexeme, mkError)) => lexError(lexeme, mkError) // encountered an invalid exstension and our last token was unresolved TODO: find a way to change the error
                 case Some(tok) => for { rest <- lex("", None) } yield tok :: rest // actually prepend the token
-                case None      => lexError(UnexpectedChar(c, 1, 1)) // catastrophic failure // TODO find a way to get the LEnv into there for the current line
               }
 
             // EOF
             case Left(_) =>
               lastValid match {
-                case Some(UnResolvedTok(srcloc, lexeme)) => lexError(InvalidNumber(lexeme, srcloc.ln, srcloc.cl)) // we reached EOF and our last token couldn't be resolved
+                case None      => lexError("", (_, env) => UnexpectedChar('\u0000', env)) // catastrophic failure
+                case Some(UnResolvedTok(srcloc, lexeme, mkError)) => lexError(lexeme, mkError) // we reached EOF and our last token couldn't be resolved
                 case Some(tok) => empty(List(tok)) 
-                case None      => lexError(UnexpectedChar('\u0000', 1, 1)) // catastrophic failure
               }
           }
         } yield tokens
