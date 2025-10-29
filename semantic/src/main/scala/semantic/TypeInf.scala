@@ -1,6 +1,6 @@
 package semantic
 
-import syntax.AST.*
+import ast.AST.*
 import monad.Monad.*
 
 

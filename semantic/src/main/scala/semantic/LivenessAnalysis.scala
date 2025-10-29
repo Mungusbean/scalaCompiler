@@ -1,6 +1,5 @@
 package semantic
 
-
 import monad.Monad.{given, *}
 import lattice.CompleteLattice.{*, given}
 import ir.PseudoAssembly.* 
