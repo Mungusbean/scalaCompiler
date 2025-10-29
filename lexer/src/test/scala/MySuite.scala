@@ -6,6 +6,7 @@ import lexer.*
 class LexerSuite extends munit.FunSuite {
 
   private def runLex(input: String): List[LToken] = {
+    //  Parsec.run(lex)(LEnv(src.toList, 1, 1)) the code below is the same as in the original test case. I just shifted the col as a col of 1 gives a bit of a weird offset
     val env = Lexer.LEnv(input.toList, 1, 0)
     val result = run(Lexer.lex())(env)
 
@@ -188,6 +189,264 @@ class LexerSuite extends munit.FunSuite {
       runLex("0b2101") // invalid digit '2' in binary
     }
     println(ex.getMessage) 
+  }
+
+  // Integrated Course test cases
+  test("lexes simple assignments: y = 1; x = x + 1;") {
+    val src = "y = 1; x = x + 1;"
+    val expected = List(
+      LToken.IdTok(SrcLoc(1,1), "y"),
+      LToken.WhiteSpace(SrcLoc(1,2), ' '),
+      LToken.EqSign(SrcLoc(1,3)),
+      LToken.WhiteSpace(SrcLoc(1,4), ' '),
+      LToken.IntTok(SrcLoc(1,5), 1),
+      LToken.SemiColon(SrcLoc(1,6)),
+      LToken.WhiteSpace(SrcLoc(1,7), ' '),
+      LToken.IdTok(SrcLoc(1,8), "x"),
+      LToken.WhiteSpace(SrcLoc(1,9), ' '),
+      LToken.EqSign(SrcLoc(1,10)),
+      LToken.WhiteSpace(SrcLoc(1,11), ' '),
+      LToken.IdTok(SrcLoc(1,12), "x"),
+      LToken.WhiteSpace(SrcLoc(1,13), ' '),
+      LToken.PlusSign(SrcLoc(1,14)),
+      LToken.WhiteSpace(SrcLoc(1,15), ' '),
+      LToken.IntTok(SrcLoc(1,16), 1),
+      LToken.SemiColon(SrcLoc(1,17))
+    )
+
+    val tokens = runLex(src)
+    assertEquals(tokens, expected)
+  }
+
+  test("lexes assignment with identifier input: y = input;") {
+    val src = "y = input;"
+    val expected = List(
+      LToken.IdTok(SrcLoc(1,1), "y"),
+      LToken.WhiteSpace(SrcLoc(1,2), ' '),
+      LToken.EqSign(SrcLoc(1,3)),
+      LToken.WhiteSpace(SrcLoc(1,4), ' '),
+      LToken.IdTok(SrcLoc(1,9), "input"),
+      LToken.SemiColon(SrcLoc(1,10))
+    )
+
+    val tokens = runLex(src)
+    assertEquals(tokens, expected)
+  }
+
+  test("lexes multiline program with while loop and return (normal int rep)") {
+  val src = """
+x = input;
+s = 0;
+c = 0;
+while c < x {
+    s = c + s;
+    c = c + 1;
+}
+return s;
+        """.filter(_ != '\r')
+
+    val expected = List(
+      LToken.WhiteSpace(SrcLoc(2,1), '\n'),
+      LToken.IdTok(SrcLoc(2,2), "x"),
+      LToken.WhiteSpace(SrcLoc(2,3), ' '),
+      LToken.EqSign(SrcLoc(2,4)),
+      LToken.WhiteSpace(SrcLoc(2,5), ' '),
+      LToken.IdTok(SrcLoc(2,10), "input"),
+      LToken.SemiColon(SrcLoc(2,11)),
+
+      LToken.WhiteSpace(SrcLoc(3,1), '\n'),
+      LToken.IdTok(SrcLoc(3,2), "s"),
+      LToken.WhiteSpace(SrcLoc(3,3), ' '),
+      LToken.EqSign(SrcLoc(3,4)),
+      LToken.WhiteSpace(SrcLoc(3,5), ' '),
+      LToken.IntTok(SrcLoc(3,6), 0),
+      LToken.SemiColon(SrcLoc(3,7)),
+
+      LToken.WhiteSpace(SrcLoc(4,1), '\n'),
+      LToken.IdTok(SrcLoc(4,2), "c"),
+      LToken.WhiteSpace(SrcLoc(4,3), ' '),
+      LToken.EqSign(SrcLoc(4,4)),
+      LToken.WhiteSpace(SrcLoc(4,5), ' '),
+      LToken.IntTok(SrcLoc(4,6), 0),
+      LToken.SemiColon(SrcLoc(4,7)),
+
+      LToken.WhiteSpace(SrcLoc(5,1), '\n'),
+      LToken.WhileKW(SrcLoc(5,6)),
+      LToken.WhiteSpace(SrcLoc(5,7), ' '),
+      LToken.IdTok(SrcLoc(5,8), "c"),
+      LToken.WhiteSpace(SrcLoc(5,9), ' '),
+      LToken.LThanSign(SrcLoc(5,10)),
+      LToken.WhiteSpace(SrcLoc(5,11), ' '),
+      LToken.IdTok(SrcLoc(5,12), "x"),
+      LToken.WhiteSpace(SrcLoc(5,13), ' '),
+      LToken.LBrace(SrcLoc(5,14)),
+
+      LToken.WhiteSpace(SrcLoc(6,1), '\n'),
+      LToken.WhiteSpace(SrcLoc(6,2), ' '),
+      LToken.WhiteSpace(SrcLoc(6,3), ' '),
+      LToken.WhiteSpace(SrcLoc(6,4), ' '),
+      LToken.WhiteSpace(SrcLoc(6,5), ' '),
+      LToken.IdTok(SrcLoc(6,6), "s"),
+      LToken.WhiteSpace(SrcLoc(6,7), ' '),
+      LToken.EqSign(SrcLoc(6,8)),
+      LToken.WhiteSpace(SrcLoc(6,9), ' '),
+      LToken.IdTok(SrcLoc(6,10), "c"),
+      LToken.WhiteSpace(SrcLoc(6,11), ' '),
+      LToken.PlusSign(SrcLoc(6,12)),
+      LToken.WhiteSpace(SrcLoc(6,13), ' '),
+      LToken.IdTok(SrcLoc(6,14), "s"),
+      LToken.SemiColon(SrcLoc(6,15)),
+
+      LToken.WhiteSpace(SrcLoc(7,1), '\n'),
+      LToken.WhiteSpace(SrcLoc(7,2), ' '),
+      LToken.WhiteSpace(SrcLoc(7,3), ' '),
+      LToken.WhiteSpace(SrcLoc(7,4), ' '),
+      LToken.WhiteSpace(SrcLoc(7,5), ' '),
+      LToken.IdTok(SrcLoc(7,6), "c"),
+      LToken.WhiteSpace(SrcLoc(7,7), ' '),
+      LToken.EqSign(SrcLoc(7,8)),
+      LToken.WhiteSpace(SrcLoc(7,9), ' '),
+      LToken.IdTok(SrcLoc(7,10), "c"),
+      LToken.WhiteSpace(SrcLoc(7,11), ' '),
+      LToken.PlusSign(SrcLoc(7,12)),
+      LToken.WhiteSpace(SrcLoc(7,13), ' '),
+      LToken.IntTok(SrcLoc(7,14), 1),
+      LToken.SemiColon(SrcLoc(7,15)),
+
+      LToken.WhiteSpace(SrcLoc(8,1), '\n'),
+      LToken.RBrace(SrcLoc(8,2)),
+
+      LToken.WhiteSpace(SrcLoc(9,1), '\n'),
+      LToken.RetKW(SrcLoc(9,7)),
+      LToken.WhiteSpace(SrcLoc(9,8), ' '),
+      LToken.IdTok(SrcLoc(9,9), "s"),
+      LToken.SemiColon(SrcLoc(9,10)),
+
+      LToken.WhiteSpace(SrcLoc(10,1), '\n'),
+      LToken.WhiteSpace(SrcLoc(10,2), ' '),
+      LToken.WhiteSpace(SrcLoc(10,3), ' '),
+      LToken.WhiteSpace(SrcLoc(10,4), ' '),
+      LToken.WhiteSpace(SrcLoc(10,5), ' '),
+      LToken.WhiteSpace(SrcLoc(10,6), ' '),
+      LToken.WhiteSpace(SrcLoc(10,7), ' '),
+      LToken.WhiteSpace(SrcLoc(10,8), ' '),
+      LToken.WhiteSpace(SrcLoc(10,9), ' ')
+    )
+
+    val tokens = runLex(src)
+
+    // // Debug for out lexer's output
+    // println("==== OBTAINED TOKENS ====")
+    // tokens.zipWithIndex.foreach { case (tok, i) =>
+    //   println(f"$i%3d: $tok")
+    // }
+    // println("=========================\n")
+
+    assertEquals(tokens, expected)
+  }
+
+  test("lexes multiline program with while loop and return (binary int rep)") {
+  val src = """
+x = input;
+s = 0;
+c = 0;
+while c < x {
+    s = c + s;
+    c = c + 0b0001;
+}
+return s;
+        """.filter(_ != '\r')
+
+    val expected = List(
+      LToken.WhiteSpace(SrcLoc(2,1), '\n'),
+      LToken.IdTok(SrcLoc(2,2), "x"),
+      LToken.WhiteSpace(SrcLoc(2,3), ' '),
+      LToken.EqSign(SrcLoc(2,4)),
+      LToken.WhiteSpace(SrcLoc(2,5), ' '),
+      LToken.IdTok(SrcLoc(2,10), "input"),
+      LToken.SemiColon(SrcLoc(2,11)),
+
+      LToken.WhiteSpace(SrcLoc(3,1), '\n'),
+      LToken.IdTok(SrcLoc(3,2), "s"),
+      LToken.WhiteSpace(SrcLoc(3,3), ' '),
+      LToken.EqSign(SrcLoc(3,4)),
+      LToken.WhiteSpace(SrcLoc(3,5), ' '),
+      LToken.IntTok(SrcLoc(3,6), 0),
+      LToken.SemiColon(SrcLoc(3,7)),
+
+      LToken.WhiteSpace(SrcLoc(4,1), '\n'),
+      LToken.IdTok(SrcLoc(4,2), "c"),
+      LToken.WhiteSpace(SrcLoc(4,3), ' '),
+      LToken.EqSign(SrcLoc(4,4)),
+      LToken.WhiteSpace(SrcLoc(4,5), ' '),
+      LToken.IntTok(SrcLoc(4,6), 0),
+      LToken.SemiColon(SrcLoc(4,7)),
+
+      LToken.WhiteSpace(SrcLoc(5,1), '\n'),
+      LToken.WhileKW(SrcLoc(5,6)),
+      LToken.WhiteSpace(SrcLoc(5,7), ' '),
+      LToken.IdTok(SrcLoc(5,8), "c"),
+      LToken.WhiteSpace(SrcLoc(5,9), ' '),
+      LToken.LThanSign(SrcLoc(5,10)),
+      LToken.WhiteSpace(SrcLoc(5,11), ' '),
+      LToken.IdTok(SrcLoc(5,12), "x"),
+      LToken.WhiteSpace(SrcLoc(5,13), ' '),
+      LToken.LBrace(SrcLoc(5,14)),
+
+      LToken.WhiteSpace(SrcLoc(6,1), '\n'),
+      LToken.WhiteSpace(SrcLoc(6,2), ' '),
+      LToken.WhiteSpace(SrcLoc(6,3), ' '),
+      LToken.WhiteSpace(SrcLoc(6,4), ' '),
+      LToken.WhiteSpace(SrcLoc(6,5), ' '),
+      LToken.IdTok(SrcLoc(6,6), "s"),
+      LToken.WhiteSpace(SrcLoc(6,7), ' '),
+      LToken.EqSign(SrcLoc(6,8)),
+      LToken.WhiteSpace(SrcLoc(6,9), ' '),
+      LToken.IdTok(SrcLoc(6,10), "c"),
+      LToken.WhiteSpace(SrcLoc(6,11), ' '),
+      LToken.PlusSign(SrcLoc(6,12)),
+      LToken.WhiteSpace(SrcLoc(6,13), ' '),
+      LToken.IdTok(SrcLoc(6,14), "s"),
+      LToken.SemiColon(SrcLoc(6,15)),
+
+      LToken.WhiteSpace(SrcLoc(7,1), '\n'),
+      LToken.WhiteSpace(SrcLoc(7,2), ' '),
+      LToken.WhiteSpace(SrcLoc(7,3), ' '),
+      LToken.WhiteSpace(SrcLoc(7,4), ' '),
+      LToken.WhiteSpace(SrcLoc(7,5), ' '),
+      LToken.IdTok(SrcLoc(7,6), "c"),
+      LToken.WhiteSpace(SrcLoc(7,7), ' '),
+      LToken.EqSign(SrcLoc(7,8)),
+      LToken.WhiteSpace(SrcLoc(7,9), ' '),
+      LToken.IdTok(SrcLoc(7,10), "c"),
+      LToken.WhiteSpace(SrcLoc(7,11), ' '),
+      LToken.PlusSign(SrcLoc(7,12)),
+      LToken.WhiteSpace(SrcLoc(7,13), ' '),
+      LToken.IntTok(SrcLoc(7,19), 1),
+      LToken.SemiColon(SrcLoc(7,20)),
+
+      LToken.WhiteSpace(SrcLoc(8,1), '\n'),
+      LToken.RBrace(SrcLoc(8,2)),
+
+      LToken.WhiteSpace(SrcLoc(9,1), '\n'),
+      LToken.RetKW(SrcLoc(9,7)),
+      LToken.WhiteSpace(SrcLoc(9,8), ' '),
+      LToken.IdTok(SrcLoc(9,9), "s"),
+      LToken.SemiColon(SrcLoc(9,10)),
+
+      LToken.WhiteSpace(SrcLoc(10,1), '\n'),
+      LToken.WhiteSpace(SrcLoc(10,2), ' '),
+      LToken.WhiteSpace(SrcLoc(10,3), ' '),
+      LToken.WhiteSpace(SrcLoc(10,4), ' '),
+      LToken.WhiteSpace(SrcLoc(10,5), ' '),
+      LToken.WhiteSpace(SrcLoc(10,6), ' '),
+      LToken.WhiteSpace(SrcLoc(10,7), ' '),
+      LToken.WhiteSpace(SrcLoc(10,8), ' '),
+      LToken.WhiteSpace(SrcLoc(10,9), ' ')
+    )
+
+    val tokens = runLex(src)
+    assertEquals(tokens, expected)
   }
 
 }
