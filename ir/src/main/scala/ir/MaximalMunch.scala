@@ -4,9 +4,9 @@ import monad.Functor.*
 import monad.Applicative.*
 import monad.Monad.*
 import monad.StateT.*
-import ast.AST.*
 import ir.PseudoAssembly.*
 import ir.Util.*
+import ast.AST.*
 
 
 object MaximalMunch {
@@ -201,6 +201,8 @@ object MaximalMunch {
             l2  <- cogen(t2, e2)
             lbl <- newLabel
         } yield  l1++l2++List((lbl,ILThan(x, t1, t2)))
+        
+        case _ => sys.error("Just to supress Warnings in test.") // Warning supression without asking compiler to ignore it
  
     }
 }

@@ -6,6 +6,7 @@ import lexer.*
 class LexerSuite extends munit.FunSuite {
 
   private def runLex(input: String): List[LToken] = {
+    //  Parsec.run(lex)(LEnv(src.toList, 1, 1)) the code below is the same as in the original test case. I just shifted the col as a col of 1 gives a bit of a weird offset
     val env = Lexer.LEnv(input.toList, 1, 0)
     val result = run(Lexer.lex())(env)
 

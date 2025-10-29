@@ -1,7 +1,5 @@
 package ir
 
-package sutd.compiler.simp.ir
-
 
 import monad.Functor.*
 import monad.Applicative.*
@@ -24,7 +22,8 @@ object MMUpDown {
 
     type UpE = Opr
     type DownE = List[Instr]
-    
+
+
     def genExp(e:Exp)(using me:StateCogenMonad[StateInfo]):CogenState[(Opr, List[(Label,Instr)])] = e match {
         // GE(c) |- (c, [])      (Const)
         case ConstExp(IntConst(v)) => me.pure((IntLit(v), Nil))
@@ -50,10 +49,49 @@ object MMUpDown {
          L is a fresh label
         --------------------------------------------------------------------- (Op)
          GE(e1 op e2) |- (X, down_e1 ++ down_e2 ++ [L:X <- up_e1 op up_e2])
-         */ 
-        case _ =>  me.pure((IntLit(1), Nil)) // fixme
+         */
+        /* 
+        enum Exp{
+            case Plus(e1:Exp, e2:Exp)       done
+            case Minus(e1:Exp, e2:Exp)      done
+            case Mult(e1:Exp, e2:Exp)       done
+            case Div(e1:Exp, e2:Exp)        not done
+            case DEqual(e1:Exp, e2:Exp)     done
+            case NEqual(e1:Exp, e2:Exp)     not done
+            case LThan(e1:Exp, e2:Exp)      done
+            case LEqual(e1:Exp, e2:Exp)     not done
+            case GThan(e1:Exp, e2:Exp)      not done
+            case GEqual(e1:Exp, e2:Exp)     not done
+            case ConstExp(l:Const)          done
+            case VarExp(v:Var)              done
+            case ParenExp(e:Exp)            done
+        }
+        */
+        // All the expressions (Maybe should have made a BinOP AST class?)
+        case Plus(e1, e2)   => genBinOpExp("IPlus", e1, e2)
+        case Minus(e1, e2)  => genBinOpExp("IMinus", e1, e2)
+        case Mult(e1, e2)   => genBinOpExp("IMult", e1, e2)
+        case DEqual(e1, e2) => genBinOpExp("IDEqual", e1, e2)
+        case LThan(e1, e2)  => genBinOpExp("ILThan", e1, e2)
+        case _              =>  me.pure((IntLit(1), Nil)) // Implement the extra stuff later
         // Lab 1 Task 2.1 end
     }
+
+    // Using String because it is easier since if we used enums it will still be troublesome to add more in the future
+    def genBinOpExp(opName: String, e1: Exp, e2: Exp)(using me:StateCogenMonad[StateInfo]):CogenState[(Opr, List[(Label,Instr)])] = for {
+        (up1, down_e1) <- genExp(e1)
+        (up2, down_e2) <- genExp(e2)
+        x              <- newTemp
+        label          <- newLabel
+
+        instr          = opName match {
+            case "IPlus"   => IPlus(x, up1, up2)
+            case "IMinus"  => IMinus(x, up1, up2)
+            case "IMult"   => IMult(x, up1, up2)
+            case "IDEqual" => IDEqual(x, up1, up2)
+            case "ILThan"  => ILThan(x, up1, up2)
+        }
+    } yield (x, down_e1 ++ down_e2 ++ List((label, instr))) // (X, down_e1 ++ down_e2 ++ [L:X <- up_e1 op up_e2]) will try understand later but im just manmoding right now
 
     def cogen(s:Stmt):CogenState[List[(Label,Instr)]] = s match {
         case Nop => StateT{ st => Identity((st, List())) } 
@@ -138,11 +176,34 @@ object MMUpDown {
         --------------------------------------------------------- (While)
         G(while cond {body}) |- down_cond ++ instrs1 ++ instrs2'
         */
-        case _ => StateT{ st => Identity((st, List())) }  // fixme
+
+        /* 
+        enum Stmt {
+            case Assign(x:Var, e:Exp)                           done
+            case If(cond:Exp, th:List[Stmt], el:List[Stmt])     done
+            case Nop                                            done
+            case While(cond:Exp, b:List[Stmt])                  done
+            case Ret(x:Var)                                     done
+        }
+         */
+        // This is the last statement implemented
+        case While(cond, body) => for {
+            lbWhile              <- chkNextLabel
+            (up_cond, down_cond) <- genExp(cond)
+
+            lWhileCondj          <- newLabel
+            instr2               <- cogen(body)
+            lEndBody             <- newLabel
+
+            lEndWhile            <- chkNextLabel
+
+            instr1  = List((lWhileCondj, IIfNot(up_cond, lEndWhile))) // If the condition is not met stop the loop and jump to the end of while loop
+            instr2a = instr2 ++ List((lEndBody, IGoto(lbWhile))) // Came from end of the while body and go back up to the start (if cond is still true)
+        } yield down_cond ++ instr1 ++ instr2a // down_cond ++ instrs1 ++ instrs2'
         // Lab 1 Task 2.2 end
     }
 
-
+    // Try implement this later
     /*
      for i in {1,n}    G(stmt_i) |- instrs_i
     -------------------------------------------------------- (Sequence)

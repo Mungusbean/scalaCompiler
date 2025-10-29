@@ -1,5 +1,7 @@
 package ast
 
+// import scala.compiletime.ops.double
+
 object AST {
   
     /**
@@ -34,8 +36,13 @@ object AST {
         case Plus(e1:Exp, e2:Exp)
         case Minus(e1:Exp, e2:Exp)
         case Mult(e1:Exp, e2:Exp)
+        case Div(e1:Exp, e2:Exp)
         case DEqual(e1:Exp, e2:Exp)
+        case NEqual(e1:Exp, e2:Exp)
         case LThan(e1:Exp, e2:Exp)
+        case LEqual(e1:Exp, e2:Exp)
+        case GThan(e1:Exp, e2:Exp)
+        case GEqual(e1:Exp, e2:Exp)
         case ConstExp(l:Const)
         case VarExp(v:Var)
         case ParenExp(e:Exp)
@@ -43,7 +50,9 @@ object AST {
 
     enum Const{
         case IntConst(v:Int)
+        case FloatConst(v:Double)
         case BoolConst(v:Boolean)
+        case StrConst(v:String)
     }
 
     

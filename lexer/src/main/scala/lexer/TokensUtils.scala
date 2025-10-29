@@ -9,6 +9,7 @@ def srcLoc(tok: LToken):SrcLoc = tok match {
     // ========================= Operator Tokens =========================
     case EqSign(src) => src
     case DEqSign(src) => src
+    case NEqSign(src) => src
     case PlusSign(src) => src
     case MinusSign(src) => src
     case AsterixSign(src) => src
@@ -106,6 +107,7 @@ val OPERATORS: Map[String, SrcLoc => LToken] = Map(
     "=>"    -> (src => GThanEqSign(src)), 
     "="     -> (src => EqSign(src)),
     "=="    -> (src => DEqSign(src)),
+    "!="    -> (src => NEqSign(src)),
     "+"     -> (src => PlusSign(src)),
     "-"     -> (src => MinusSign(src)),
     "*"     -> (src => AsterixSign(src)),

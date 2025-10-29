@@ -51,7 +51,7 @@ lazy val ir = project
     libraryDependencies ++= Seq(
       "org.ow2.asm" % "asm" % "9.6",
       "org.ow2.asm" % "asm-util" % "9.6",
-      "org.ow2.asm" % "asm-tree" % "9.6" // optional but often handy
+      "org.ow2.asm" % "asm-tree" % "9.6" 
     )
   )
   .dependsOn(generalUtils, ast)
@@ -83,7 +83,7 @@ lazy val cli = project
 // Root aggregator
 lazy val root = project
   .in(file("."))
-  .aggregate(lexer, ast, parser, cli)
+  .aggregate(lexer, ast, parser, cli, ir, semantic, interpreter, backend)
   .settings(
     name := "ScalaCompiler",
     version := "0.1.0-SNAPSHOT"

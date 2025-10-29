@@ -1,7 +1,7 @@
 package lexer
 
-import scala.compiletime.ops.float
-import scala.compiletime.ops.double
+// import scala.compiletime.ops.float
+// import scala.compiletime.ops.double
 import lexer.Lexer.LEnv
 
 case class SrcLoc(val ln: Int, val cl: Int)
@@ -13,6 +13,7 @@ enum LToken {
     // ========================= Operator Tokens =========================
     case EqSign(src:SrcLoc)
     case DEqSign(src:SrcLoc)
+    case NEqSign(src:SrcLoc)
     case PlusSign(src:SrcLoc)
     case MinusSign(src:SrcLoc)
     case AsterixSign(src:SrcLoc)
