@@ -3,7 +3,7 @@ package parser
 import org.scalactic.Bool
 import parsec.Parsec.*
 import ast.AST.*
-import lexer.Lexer.*
+// import lexer.Lexer.*
 import lexer.*
 
 object Parser {
@@ -229,78 +229,124 @@ object Parser {
       * @return
       */
 
-    def p_op0: Parser[PEnv, LToken] = choice(p_dequal)(
-        choice(p_nequal)(
-            choice(p_lthan)(
-                choice(p_lequal)(
-                    choice(p_gthan)(p_gequal)
+    // def p_op0: Parser[PEnv, LToken] = choice(p_dequal)(
+    //     choice(p_nequal)(
+    //         choice(p_lthan)(
+    //             choice(p_lequal)(
+    //                 choice(p_gthan)(p_gequal)
+    //             )
+    //         )
+    //     )
+    // )
+    // def p_op1: Parser[PEnv, LToken] = choice(p_plus)(p_minus)
+    // def p_op2: Parser[PEnv, LToken] = choice(p_mult)(p_div)
+
+    // def p_exp:Parser[PEnv, Exp] = for {
+    //     _ <- p_spaces
+    //     e <- choice(attempt(p_Ep_op0_Ep))(p_Ep)
+    // } yield e
+
+    // def p_Ep: Parser[PEnv, Exp] = for {
+    //     _  <- p_spaces
+    //     ep <- choice(attempt(p_T_op1_Ep))(p_T)
+    // } yield ep
+
+    // def p_T: Parser[PEnv, Exp] = for {
+    //     _ <- p_spaces
+    //     t <- choice(attempt(p_F_op2_T))(p_F)
+    // } yield t
+
+    // def p_F: Parser[PEnv, Exp] = for {
+    //     f <- choice(p_const.map(ConstExp(_)))( // For some reason the parser does not accept +A so we just "cast" it: edit nvm im an idiot i was too tired and didnt see the difference
+    //             choice(p_var.map(VarExp(_)))(p_parenExp.map(identity))
+    //         )
+    // } yield f
+
+    // def p_Ep_op0_Ep: Parser[PEnv, Exp] = for {
+    //     ep1 <- p_Ep
+    //     _   <- p_spaces
+    //     op0 <- p_op0
+    //     _   <- p_spaces
+    //     ep2 <- p_Ep
+    // } yield op0 match {
+    //     case DEqSign(src)     => DEqual(ep1, ep2)
+    //     case NEqSign(src)     => NEqual(ep1, ep2)
+    //     case LThanSign(src)   => LThan(ep1, ep2)
+    //     case LThanEqSign(src) => LEqual(ep1, ep2)
+    //     case GThanSign(src)   => GThan(ep1, ep2)
+    //     case GThanEqSign(src) => GEqual(ep1, ep2)
+    //     case _                => sys.error("Error: unexpected operator token, expected ==, !=, >, <, >= or <=")
+    // }
+
+    // def p_T_op1_Ep: Parser[PEnv, Exp] = for {
+    //     t   <- p_T
+    //     _   <- p_spaces
+    //     op1 <- p_op1
+    //     _   <- p_spaces
+    //     e   <- p_exp
+    // } yield op1 match {
+    //     case PlusSign(src)  => Plus(t, e)
+    //     case MinusSign(src) => Minus(t, e)
+    //     case _              => sys.error("Error: unexpected operator token, expected + or -.")
+    // }
+
+    // def p_F_op2_T: Parser[PEnv, Exp] = for {
+    //     f   <- p_F
+    //     _   <- p_spaces
+    //     op2 <- p_op2
+    //     _   <- p_spaces
+    //     t   <- p_T
+    // } yield op2 match {
+    //     case AsterixSign(src) => Mult(f, t)
+    //     case FSlashSign(src)  => Div(f, t)
+    //     case _                => sys.error("Error: unexpected operator token, expected * or /.") // place holder
+    // }
+
+    // def p_parenExp: Parser[PEnv, ParenExp] = for {
+    //     _ <- p_lparen
+    //     _ <- p_spaces
+    //     e <- p_exp
+    //     _ <- p_spaces
+    //     _ <- p_rparen
+    // } yield ParenExp(e)
+
+    /**
+      *  CFG UPDATED (trying to prevent right associative nature)
+      *  The original derived CFG, was left factored to prevent left recurssion and ambiguity.
+      *  A heirachy for the precendance of the operators was also achieved by splitting the operands into tiers: (op0, op1 and op2)
+      *  Where operators parsed in op0 were of lowest precedance and op2 being operators of highest precedance
+      *  - due to the right recursive nature of the CFG (and the fact that the operands were genrated via right recursion), modified CFG is now right assciative.
+      *  We will rectify this by leftfolding operands of the same precedance level instead of using explicit recursion via production rules.
+      * 
+      *  NEW CFG (Left recursive hopefully)
+      *  E  ::= E' (op0 E')* // where ( exp )* indicates klien star repatition (similar to parsing as many spaces as possible)
+      *  E' ::= T (op1 T)*
+      *  T  ::= F (op2 F)*
+      *  F  ::= C | X | (E)  
+      */
+    
+    def p_op0: Parser[PEnv, (Exp, Exp) => Exp] = 
+        choice(p_dequal.map(_ => (l:Exp, r:Exp) => DEqual(l, r)))(
+            choice(p_nequal.map(_ => (l:Exp, r:Exp) => NEqual(l, r)))(
+                choice(p_lthan.map(_ => (l:Exp, r:Exp) => LThan(l, r)))(
+                    choice(p_lequal.map(_ => (l:Exp, r:Exp) => LEqual(l, r)))(
+                        choice(p_gthan.map(_ => (l:Exp, r:Exp) => GThan(l, r)))(
+                            p_gequal.map(_ => (l:Exp, r:Exp) => GEqual(l, r))
+                        )
+                    )
                 )
             )
         )
-    )
-    def p_op1: Parser[PEnv, LToken] = choice(p_plus)(p_minus)
-    def p_op2: Parser[PEnv, LToken] = choice(p_mult)(p_div)
+    
+    def p_op1: Parser[PEnv, (Exp, Exp) => Exp] = 
+        choice(p_plus.map(_ => (l:Exp, r:Exp) => Plus(l, r)))(
+            p_minus.map(_ => (l:Exp, r:Exp) => Minus(l, r))
+        )
 
-    def p_exp:Parser[PEnv, Exp] = for {
-        _ <- p_spaces
-        e <- choice(attempt(p_Ep_op0_Ep))(p_Ep)
-    } yield e
-
-    def p_Ep: Parser[PEnv, Exp] = for {
-        _  <- p_spaces
-        ep <- choice(attempt(p_T_op1_Ep))(p_T)
-    } yield ep
-
-    def p_T: Parser[PEnv, Exp] = for {
-        _ <- p_spaces
-        t <- choice(attempt(p_F_op2_T))(p_F)
-    } yield t
-
-    def p_F: Parser[PEnv, Exp] = for {
-        f <- choice(p_const.map(ConstExp(_)))( // For some reason the parser does not accept +A so we just "cast" it
-                choice(p_var.map(VarExp(_)))(p_parenExp.map(identity))
-            )
-    } yield f
-
-    def p_Ep_op0_Ep: Parser[PEnv, Exp] = for {
-        ep1 <- p_Ep
-        _   <- p_spaces
-        op0 <- p_op0
-        _   <- p_spaces
-        ep2 <- p_Ep
-    } yield op0 match {
-        case DEqSign(src)     => DEqual(ep1, ep2)
-        case NEqSign(src)     => NEqual(ep1, ep2)
-        case LThanSign(src)   => LThan(ep1, ep2)
-        case LThanEqSign(src) => LEqual(ep1, ep2)
-        case GThanSign(src)   => GThan(ep1, ep2)
-        case GThanEqSign(src) => GEqual(ep1, ep2)
-        case _                => sys.error("unexpected operator token, expected ==, !=, >, <, >= or <=")
-    }
-
-    def p_T_op1_Ep: Parser[PEnv, Exp] = for {
-        t   <- p_T
-        _   <- p_spaces
-        op1 <- p_op1
-        _   <- p_spaces
-        e   <- p_exp
-    } yield op1 match {
-        case PlusSign(src)  => Plus(t, e)
-        case MinusSign(src) => Minus(t, e)
-        case _              => sys.error("Error: unexpected operator token, expected + or -.")
-    }
-
-    def p_F_op2_T: Parser[PEnv, Exp] = for {
-        f   <- p_F
-        _   <- p_spaces
-        op2 <- p_op2
-        _   <- p_spaces
-        t   <- p_T
-    } yield op2 match {
-        case AsterixSign(src) => Mult(f, t)
-        case FSlashSign(src)  => Div(f, t)
-        case _                => sys.error("Error: unexpected operator token, expected * or /.") // place holder
-    }
+    def p_op2: Parser[PEnv, (Exp, Exp) => Exp] = 
+        choice(p_mult.map(_ => (l:Exp, r:Exp) => Mult(l, r)))(
+            p_div.map(_ => (l:Exp, r:Exp) => Div(l, r))
+        )
 
     def p_parenExp: Parser[PEnv, ParenExp] = for {
         _ <- p_lparen
@@ -309,6 +355,51 @@ object Parser {
         _ <- p_spaces
         _ <- p_rparen
     } yield ParenExp(e)
+
+    def p_F: Parser[PEnv, Exp] = for {
+        f <- choice(p_const.map(ConstExp(_)))( // For some reason the parser does not accept +A so we just "cast" it: edit nvm im an idiot i was too tired and didnt see the difference
+                choice(p_var.map(VarExp(_)))(p_parenExp.map(identity))
+            )
+    } yield f
+
+    // T ::= F (op2 F)*
+    def p_T:Parser[PEnv, Exp] = for {
+        f          <- p_F
+        op2_F_star <- many(attempt(
+            for {
+                _   <- p_spaces
+                op2 <- p_op2 
+                _   <- p_spaces
+                f2  <- p_F
+            } yield (op2, f2) // this will now be a list of operations to conduct. (op2: function that wraps expressions in op2 operators, exp: expression to operate on))
+        ))
+    } yield op2_F_star.foldLeft(f){ case (acc, (op, rhs)) => op(acc, rhs)}
+
+    // E' ::= T (op1 T)*
+    def p_Ep:Parser[PEnv, Exp] = for {
+        t <- p_T
+        op1_T_star <- many(attempt(
+            for {
+                _   <- p_spaces
+                op1 <- p_op1
+                _   <- p_spaces
+                t2  <- p_T
+            } yield (op1, t2)
+        ))
+    } yield op1_T_star.foldLeft(t){ case (acc, (op, rhs)) => op(acc, rhs)}
+
+    // E ::= E' (op0 E')*
+    def p_exp:Parser[PEnv, Exp] = for {
+        ep <- p_Ep
+        op0_Ep_star <- many(attempt(
+            for {
+                _   <- p_spaces
+                op0 <- p_op0
+                _   <- p_spaces
+                ep2 <- p_Ep
+            } yield (op0, ep2)
+        ))
+    } yield op0_Ep_star.foldLeft(ep){ case (acc, (op, rhs)) => op(acc, rhs)}
 
     /** Lab 1 Task 1.2 end */
     

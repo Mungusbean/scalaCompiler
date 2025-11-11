@@ -1,7 +1,7 @@
 // For more information on writing tests, see
 // https://scalameta.org/munit/docs/getting-started.html
 import parsec.Parsec.*
-import lexer.*
+import lexer.* 
 
 class LexerSuite extends munit.FunSuite {
 

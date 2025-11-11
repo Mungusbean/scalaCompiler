@@ -146,6 +146,121 @@ class ParserSuite extends funsuite.AnyFunSuite {
         }
     }
 
+    test("precedence: parsing x + y * z") {
+        val input = List(
+            IdTok(SrcLoc(1,1),"x"), WhiteSpace(SrcLoc(1,2),' '),
+            PlusSign(SrcLoc(1,3)), WhiteSpace(SrcLoc(1,4),' '),
+            IdTok(SrcLoc(1,5),"y"), WhiteSpace(SrcLoc(1,6),' '),
+            AsterixSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,8),' '),
+            IdTok(SrcLoc(1,9),"z")
+        )
+        val expected = Plus(
+            VarExp(Var("x")),
+            Mult(VarExp(Var("y")), VarExp(Var("z")))
+        )
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
+    test("associativity: parsing a - b - c") {
+        val input = List(
+            IdTok(SrcLoc(1,1),"a"), WhiteSpace(SrcLoc(1,2),' '),
+            MinusSign(SrcLoc(1,3)), WhiteSpace(SrcLoc(1,4),' '),
+            IdTok(SrcLoc(1,5),"b"), WhiteSpace(SrcLoc(1,6),' '),
+            MinusSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,8),' '),
+            IdTok(SrcLoc(1,9),"c")
+        )
+        val expected = Minus(
+            Minus(VarExp(Var("a")), VarExp(Var("b"))),
+            VarExp(Var("c"))
+        )
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
+    test("precedence + associativity: parsing a + b * c - d") {
+        val input = List(
+            IdTok(SrcLoc(1,1),"a"), WhiteSpace(SrcLoc(1,2),' '),
+            PlusSign(SrcLoc(1,3)), WhiteSpace(SrcLoc(1,4),' '),
+            IdTok(SrcLoc(1,5),"b"), WhiteSpace(SrcLoc(1,6),' '),
+            AsterixSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,8),' '),
+            IdTok(SrcLoc(1,9),"c"), WhiteSpace(SrcLoc(1,10),' '),
+            MinusSign(SrcLoc(1,11)), WhiteSpace(SrcLoc(1,12),' '),
+            IdTok(SrcLoc(1,13),"d")
+        )
+
+        val expected = Minus(
+            Plus(VarExp(Var("a")), Mult(VarExp(Var("b")), VarExp(Var("c")))),
+            VarExp(Var("d"))
+        )
+
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
+    test("parentheses override precedence: parsing (a + b) * c") {
+        val input = List(
+            LParen(SrcLoc(1,1)), IdTok(SrcLoc(1,2),"a"), WhiteSpace(SrcLoc(1,3),' '),
+            PlusSign(SrcLoc(1,4)), WhiteSpace(SrcLoc(1,5),' '),
+            IdTok(SrcLoc(1,6),"b"), RParen(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,8),' '),
+            AsterixSign(SrcLoc(1,9)), WhiteSpace(SrcLoc(1,10),' '),
+            IdTok(SrcLoc(1,11),"c")
+        )
+
+        val expected = Mult(
+            ParenExp(Plus(VarExp(Var("a")), VarExp(Var("b")))),
+            VarExp(Var("c"))
+        )
+
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
+    test("relational precedence: parsing a + b < c * d") {
+        val input = List(
+            IdTok(SrcLoc(1,1),"a"), WhiteSpace(SrcLoc(1,2),' '),
+            PlusSign(SrcLoc(1,3)), WhiteSpace(SrcLoc(1,4),' '),
+            IdTok(SrcLoc(1,5),"b"), WhiteSpace(SrcLoc(1,6),' '),
+            LThanSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,8),' '),
+            IdTok(SrcLoc(1,9),"c"), WhiteSpace(SrcLoc(1,10),' '),
+            AsterixSign(SrcLoc(1,11)), WhiteSpace(SrcLoc(1,12),' '),
+            IdTok(SrcLoc(1,13),"d")
+        )
+
+        val expected = LThan(
+            Plus(VarExp(Var("a")), VarExp(Var("b"))),
+            Mult(VarExp(Var("c")), VarExp(Var("d")))
+        )
+
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+            
     /* 
     x = input;
     s = 0;
