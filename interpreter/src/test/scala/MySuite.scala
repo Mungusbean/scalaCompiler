@@ -1,5 +1,3 @@
-package sutd.compiler.simp
-
 import scala.language.adhocExtensions
 import org.scalatest.funsuite 
 import org.scalatest.matchers
@@ -171,3 +169,4 @@ class PAIntSuite extends funsuite.AnyFunSuite {
         }
     }
 }
+

@@ -47,7 +47,24 @@ object SimpInt {
         c3 <- plusConst(c1,c2)
       } yield c3
       // Lab 2 Task 1.1
-      case _ => Left("TODO") // fixme
+      // enum Exp{
+      //   case Plus(e1:Exp, e2:Exp)    done
+      //   case Minus(e1:Exp, e2:Exp)   done
+      //   case Mult(e1:Exp, e2:Exp)    done
+      //   case Div(e1:Exp, e2:Exp)     not implemented (added by me)
+      //   case DEqual(e1:Exp, e2:Exp)  done
+      //   case NEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+      //   case LThan(e1:Exp, e2:Exp)   done
+      //   case LEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+      //   case GThan(e1:Exp, e2:Exp)   not implemented (added by me)
+      //   case GEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+      //   case ConstExp(l:Const)       done
+      //   case VarExp(v:Var)           done
+      //   case ParenExp(e:Exp)         done
+      // }
+      case VarExp(v) => dlt.get(v).toRight("Variable does not exist.")
+      case ParenExp(e) => for {c1 <- evalExp(dlt, e)} yield c1
+      case _ => Left("Implement the rest of them Meng u lazy boi") // fixme
       // Lab 2 Task 1.1 end
     }
 
@@ -68,8 +85,11 @@ object SimpInt {
     given evalMany[A](using i:Evaluable[A]):Evaluable[List[A]] = new Evaluable[List[A]] {
       def eval(dlt:Delta, ss:List[A]):Either[ErrMsg, Delta] = ss match {
         case Nil => Right(dlt) 
-        // Lab 2 Task 1.2 
-        case _ => Left("TODO") // fixme
+        // Lab 2 Task 1.2
+        case head :: tail => i.eval(dlt, head) match {
+            case Left(err) => Left(err)
+            case Right(dlt_updated) => eval(dlt_updated, tail)
+          }
         // Lab 2 Task 1.2 end
       }
     }
@@ -85,12 +105,40 @@ object SimpInt {
           dlt_2 <- c match {
             case IntConst(_) => Left("int expression found in the if condition position.")
             case BoolConst(b) if b => evalMany.eval(dlt, th)
-            case BoolConst(b)      => evalMany.eval(dlt, el)  
+            case BoolConst(b)      => evalMany.eval(dlt, el)
+            case _ => Left("Implement the rest of them Meng u lazy boi (float and string)") 
           }
         } yield dlt_2
         case Ret(x) => Right(dlt)
         // Lab 2 Task 1.2 
-        case _ => Left("TODO") // fixme
+        // enum Stmt {
+        //   case Assign(x:Var, e:Exp)                          done
+        //   case If(cond:Exp, th:List[Stmt], el:List[Stmt])    done
+        //   case Nop                                           done 
+        //   case While(cond:Exp, b:List[Stmt])                 done
+        //   case Ret(x:Var)                                    done
+        // }
+        // Steps for while
+        // 1. eval condition
+        // 2. match evaluated condition cases:
+        //    2.1 condition evaluated to invalid const: int, float or string -> Left(err)
+        //    2.2 condition evaluated to true: 
+        //        2.21 run and eval the body -> dlt_body <- evalMany.eval(dlt, body)
+        //        2.22 evaluate the statement "s" (the while loop) again with the updated delta from running the body -> dlt_final <- eval(dlt_body, s)
+        //    2.3 condition evaluated to false:
+        //        2.31 body is not run. So delta does not update after the eval of condition -> Right(dlt)
+        case While(cond, body) => for {
+          c <- evalExp(dlt, cond)
+          dlt_2 <- c match {
+            case BoolConst(true)   => for {
+              dlt_body <- evalMany.eval(dlt, body) // update the delta of the env from running the loop body.
+              dlt_final <- eval(dlt_body, s) // run again until loop condition changes
+            } yield dlt_final
+            case BoolConst(false)  => Right(dlt) // Nothing happens
+            case _                 => Left("While condition evluated to invalid constant")
+          }
+        } yield dlt_2
+        // case _ => Left("Might be more later") // fixme
         // Lab 2 Task 1.2 end
       }
 
