@@ -9,6 +9,8 @@ object TypeInf {
     import Exp.*
     enum Type {
         case IntTy
+        //case FloatTy
+        //case StringTy
         case BoolTy
     }
 
@@ -83,7 +85,19 @@ object TypeInf {
     given exTypeSubstitutable:Substitutable[ExType] = new Substitutable[ExType]{
         def applySubst(tysubst:TypeSubst)(ty:ExType):ExType = tysubst match {
             // Lab 2 Task 2.1
-            case _ => ty // fixme
+            // enum ExType {
+            //     case MonoType(t:Type)
+            //     case TypeVar(n:String)
+            // }
+            case Empty => ty // just return the original extype
+            case RevComp((alpha, ty1), ts1) => {
+                val ty2 = applySubst(ts1)(ty) // apply the substition once to find out the type ty2
+                ty2 match {
+                    case TypeVar(n) if n == alpha => applySubst(ts1)(ty1) // [T_hat/ alpha]alpha (if n == alpha) continue down the chain
+                    case _ => ty2 // [T_hat/ alpha]beta = beta and [T_hat/ alpha]T = T (both are presented by ty2)
+                }
+            }
+            // case _ => ty // fixme
             // Lab 2 Task 2.1 end
         }
     }
@@ -127,6 +141,14 @@ object TypeInf {
 
     given infStmt:Infer[Stmt] = new Infer[Stmt] {
         def infer(s:Stmt):TypeConstrs = s match {
+            // stmt cases
+            // enum Stmt {
+            //     case Assign(x:Var, e:Exp)                        done
+            //     case If(cond:Exp, th:List[Stmt], el:List[Stmt])  not done
+            //     case Nop                                         done 
+            //     case While(cond:Exp, b:List[Stmt])               not done
+            //     case Ret(x:Var)                                  done
+            // }
             case Nop => Set() 
             case Assign(x, e) => {
                 val n = varname(x)
@@ -137,7 +159,22 @@ object TypeInf {
             }
             case Ret(x) => Set()
             // Lab 2 Task 2.3
-            case _ => Set() // fixme
+            case If(cond, th, el) => {
+                val kBool = inferExp(cond) match {
+                    case (condTy, kCond) => kCond + ((condTy, MonoType(BoolTy)))
+                }
+                val kTh = infList.infer(th)
+                val kEl = infList.infer(el)
+                kBool.union(kTh).union(kEl)
+            }
+            case While(cond, body) => {
+                val kBool = inferExp(cond) match {
+                    case (condTy, kCond) => kCond + ((condTy, MonoType(BoolTy)))
+                }
+                val kBody = infList.infer(body)
+                kBool.union(kBody)
+            }
+            // case _ => Set() // fixme
             // Lab 2 Task 2.3 end
             
         }
@@ -159,7 +196,37 @@ object TypeInf {
         }
         case ParenExp(e) => inferExp(e)
         // Lab 2 Task 2.3
-        case _ => (MonoType(IntTy), Set()) // fixme
+        // enum Exp{
+        //   case Plus(e1:Exp, e2:Exp)    not done
+        //   case Minus(e1:Exp, e2:Exp)   not done
+        //   case Mult(e1:Exp, e2:Exp)    not done
+        //   case Div(e1:Exp, e2:Exp)     not implemented (added by me)
+        //   case DEqual(e1:Exp, e2:Exp)  not done
+        //   case NEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+        //   case LThan(e1:Exp, e2:Exp)   not done
+        //   case LEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+        //   case GThan(e1:Exp, e2:Exp)   not implemented (added by me)
+        //   case GEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+        //   case ConstExp(l:Const)       done
+        //   case VarExp(v:Var)           done
+        //   case ParenExp(e:Exp)         done
+        // }
+        case Plus(e1, e2)   => inferExp(e1) // we will assume that the infered type must be constrained to the left hand operand
+        case Minus(e1, e2)  => inferExp(e1)
+        case Mult(e1, e2)   => inferExp(e1)
+        case DEqual(e1, e2) => {
+            val (e1ty, e1k) = inferExp(e1)
+            val (e2ty, e2k) = inferExp(e2)
+            val k_union = e1k.union(e2k) + ((e1ty, e2ty)) // we will assume that e1 and e2 must be of the same type to be compared
+            (MonoType(BoolTy), k_union) // irregardless, the final result of a cond must be a boolean type
+        }
+        case LThan(e1, e2)  => {
+            val (e1ty, e1k) = inferExp(e1)
+            val (e2ty, e2k) = inferExp(e2)
+            val k_union = e1k.union(e2k) + ((e1ty, e2ty)) // we will assume that e1 and e2 must be of the same type to be compared
+            (MonoType(BoolTy), k_union) // irregardless, the final result of a cond must be a boolean type
+        }
+        case _ => (MonoType(IntTy), Set()) // fixme (leaving here as i have unimplemented stuff)
         // Lab 2 Task 2.3 end        
     } 
 
@@ -176,7 +243,11 @@ object TypeInf {
     given extypesUnifiable:Unifiable[(ExType, ExType)] = new Unifiable[(ExType, ExType)] {
         def mgu(p:(ExType,ExType)):Either[String,TypeSubst] = p match {
             // Lab 2 Task 2.2
-            case (exTy1, exTy2) => Left(s"error: unable to unify ${p.toString}") // fixme
+            case (MonoType(IntTy), MonoType(IntTy))     => Right(Empty)
+            case (MonoType(BoolTy), MonoType(BoolTy))   => Right(Empty)
+            case (TypeVar(alpha), t)                    => Right(RevComp((alpha, t), Empty))
+            case (t, TypeVar(alpha))                    => Right(RevComp((alpha, t), Empty))
+            case _ => Left(s"error: unable to unify ${p.toString}") // fixme
             // Lab 2 Task 2.2 end
         }
     }
@@ -194,7 +265,13 @@ object TypeInf {
         def mgu(l:List[A]):Either[String, TypeSubst] = {
             l match {
                 // Lab 2 Task 2.2
-                case _ => Left("TODO") // fixme
+                case Nil            => Right(Empty) // mgu() = []
+                case t1_t2 :: k   => for { // (T_1,T_2) cup k 
+                    psi1    <- u.mgu(t1_t2) // mgu(T1, T2)
+                    k_prime = s.applySubst(psi1)(k) // apply psi 1 to k (k_prime will be of type List[A])
+                    psi2    <- mgu(k_prime) // run this mgu on k_prime
+                } yield compose(psi2, psi1)
+                // case _ => Left("TODO") // fixme
                 // Lab 2 Task 2.2 end
             }
         }
