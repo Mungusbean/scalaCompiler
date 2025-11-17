@@ -260,7 +260,78 @@ class ParserSuite extends funsuite.AnyFunSuite {
             assert(false)
         }
     }
-            
+
+    test("relational precedence: parsing a + b == c * d") {
+        val input = List(
+            IdTok(SrcLoc(1,1),"a"), WhiteSpace(SrcLoc(1,2),' '),
+            PlusSign(SrcLoc(1,3)), WhiteSpace(SrcLoc(1,4),' '),
+            IdTok(SrcLoc(1,5),"b"), WhiteSpace(SrcLoc(1,6),' '),
+            DEqSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,9),' '),
+            IdTok(SrcLoc(1,10),"c"), WhiteSpace(SrcLoc(1,11),' '),
+            AsterixSign(SrcLoc(1,12)), WhiteSpace(SrcLoc(1,13),' '),
+            IdTok(SrcLoc(1,14),"d")
+        )
+
+        val expected = DEqual(
+            Plus(VarExp(Var("a")), VarExp(Var("b"))),
+            Mult(VarExp(Var("c")), VarExp(Var("d")))
+        )
+
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
+    test("relational precedence: parsing a + b != c * d") {
+        val input = List(
+            IdTok(SrcLoc(1,1),"a"), WhiteSpace(SrcLoc(1,2),' '),
+            PlusSign(SrcLoc(1,3)), WhiteSpace(SrcLoc(1,4),' '),
+            IdTok(SrcLoc(1,5),"b"), WhiteSpace(SrcLoc(1,6),' '),
+            NEqSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,9),' '),
+            IdTok(SrcLoc(1,10),"c"), WhiteSpace(SrcLoc(1,11),' '),
+            AsterixSign(SrcLoc(1,12)), WhiteSpace(SrcLoc(1,13),' '),
+            IdTok(SrcLoc(1,14),"d")
+        )
+
+        val expected = NEqual(
+            Plus(VarExp(Var("a")), VarExp(Var("b"))),
+            Mult(VarExp(Var("c")), VarExp(Var("d")))
+        )
+
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
+    test("""relational precedence: parsing "red" != "blu" """) {
+        val input = List(
+            StringTok(SrcLoc(1,1),"red"), WhiteSpace(SrcLoc(1,6),' '),
+            NEqSign(SrcLoc(1,7)), WhiteSpace(SrcLoc(1,9),' '),
+            StringTok(SrcLoc(1,10),"blu")
+        )
+
+        val expected = NEqual(
+            ConstExp(StrConst("red")),
+            ConstExp(StrConst("blu"))
+        )
+
+        Parsec.run(p_exp)(PEnv(input)) match {
+            case Consumed(Ok((exp, penv))) if done(penv) =>
+            assert(exp == expected, s"\nExpected: $expected\nObtained: $exp\n")
+            case others =>
+            println(s"\n==== PARSER RESULT (not OK) ====\n$others\n==============================\n")
+            assert(false)
+        }
+    }
+
     /* 
     x = input;
     s = 0;
