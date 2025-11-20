@@ -356,6 +356,18 @@ object Parser {
         _ <- p_rparen
     } yield ParenExp(e)
 
+    def p_X(p_op:Parser[PEnv, (Exp, Exp) => Exp])(p_x:Parser[PEnv, Exp]):Parser[PEnv, Exp] = for {
+        x          <- p_x
+        op_X_star <- many(attempt(
+            for {
+                _   <- p_spaces
+                op <- p_op 
+                _   <- p_spaces
+                f2  <- p_x
+            } yield (op, f2) // this will now be a list of operations to conduct. (op: function that wraps expressions in op operators, exp: expression to operate on))
+        ))
+    } yield op_X_star.foldLeft(x){ case (acc, (op, rhs)) => op(acc, rhs)}
+
     def p_F: Parser[PEnv, Exp] = for {
         f <- choice(p_const.map(ConstExp(_)))( // For some reason the parser does not accept +A so we just "cast" it: edit nvm im an idiot i was too tired and didnt see the difference
                 choice(p_var.map(VarExp(_)))(p_parenExp.map(identity))
@@ -363,43 +375,13 @@ object Parser {
     } yield f
 
     // T ::= F (op2 F)*
-    def p_T:Parser[PEnv, Exp] = for {
-        f          <- p_F
-        op2_F_star <- many(attempt(
-            for {
-                _   <- p_spaces
-                op2 <- p_op2 
-                _   <- p_spaces
-                f2  <- p_F
-            } yield (op2, f2) // this will now be a list of operations to conduct. (op2: function that wraps expressions in op2 operators, exp: expression to operate on))
-        ))
-    } yield op2_F_star.foldLeft(f){ case (acc, (op, rhs)) => op(acc, rhs)}
+    val p_T = p_X(p_op2)(p_F)
 
     // E' ::= T (op1 T)*
-    def p_Ep:Parser[PEnv, Exp] = for {
-        t <- p_T
-        op1_T_star <- many(attempt(
-            for {
-                _   <- p_spaces
-                op1 <- p_op1
-                _   <- p_spaces
-                t2  <- p_T
-            } yield (op1, t2)
-        ))
-    } yield op1_T_star.foldLeft(t){ case (acc, (op, rhs)) => op(acc, rhs)}
+    val p_Ep = p_X(p_op1)(p_T)
 
     // E ::= E' (op0 E')*
-    def p_exp:Parser[PEnv, Exp] = for {
-        ep <- p_Ep
-        op0_Ep_star <- many(attempt(
-            for {
-                _   <- p_spaces
-                op0 <- p_op0
-                _   <- p_spaces
-                ep2 <- p_Ep
-            } yield (op0, ep2)
-        ))
-    } yield op0_Ep_star.foldLeft(ep){ case (acc, (op, rhs)) => op(acc, rhs)}
+    val p_exp = p_X(p_op0)(p_Ep)
 
 
     /** Lab 1 Task 1.2 end */
@@ -486,7 +468,12 @@ object Parser {
       *
       * @return
       */
-    def p_const:Parser[PEnv, Const] = choice(choice(p_true)(p_false))(p_int) // I have to edit this
+    def p_const:Parser[PEnv, Const] = 
+        choice(choice(p_true)(p_false))(
+            choice(p_int)(
+                choice(p_float)(p_string)
+            )
+        )
 
     def p_true:Parser[PEnv, Const] = for {
         tok <- sat((ltoken:LToken) => ltoken match {

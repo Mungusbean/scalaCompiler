@@ -18,8 +18,13 @@ object PseudoAssembly {
         case IPlus(dest:Opr, src1:Opr, src2:Opr)
         case IMinus(dest:Opr, src1:Opr, src2:Opr)
         case IMult(dest:Opr, src1:Opr, src2:Opr)
+        //case IDiv(dest:Opr, src1:Opr, src2:Opr)
         case IDEqual(dest:Opr, src1:Opr, src2:Opr)
+        //case INEqual(dest:Opr, src1:Opr, src2:Opr)
         case ILThan(dest:Opr, src1:Opr, src2:Opr)
+        //case ILEqual(dest:Opr, src1:Opr, src2:Opr)
+        //case IGThan(dest:Opr, src1:Opr, src2:Opr)
+        //case IGEqual(dest:Opr, src1:Opr, src2:Opr)
         case IRet
         case IIfNot(cond:Opr, dest:Label)
         case IGoto(dest:Label)
@@ -28,6 +33,8 @@ object PseudoAssembly {
     enum Opr {
         case Regstr(name:String)
         case IntLit(v:Int)
+        //case StrLit(v:String)
+        //case FloatLit(v:Double)
         case Temp(v:AVar)
     }
 

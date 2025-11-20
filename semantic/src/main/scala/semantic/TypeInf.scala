@@ -197,38 +197,38 @@ object TypeInf {
         case ParenExp(e) => inferExp(e)
         // Lab 2 Task 2.3
         // enum Exp{
-        //   case Plus(e1:Exp, e2:Exp)    not done
-        //   case Minus(e1:Exp, e2:Exp)   not done
-        //   case Mult(e1:Exp, e2:Exp)    not done
-        //   case Div(e1:Exp, e2:Exp)     not implemented (added by me)
-        //   case DEqual(e1:Exp, e2:Exp)  not done
-        //   case NEqual(e1:Exp, e2:Exp)  not implemented (added by me)
-        //   case LThan(e1:Exp, e2:Exp)   not done
-        //   case LEqual(e1:Exp, e2:Exp)  not implemented (added by me)
+        //   case Plus(e1:Exp, e2:Exp)    done
+        //   case Minus(e1:Exp, e2:Exp)   done
+        //   case Mult(e1:Exp, e2:Exp)    done
+        //   case Div(e1:Exp, e2:Exp)     done
+        //   case DEqual(e1:Exp, e2:Exp)  done
+        //   case NEqual(e1:Exp, e2:Exp)  done
+        //   case LThan(e1:Exp, e2:Exp)   done
+        //   case LEqual(e1:Exp, e2:Exp)  done
         //   case GThan(e1:Exp, e2:Exp)   not implemented (added by me)
         //   case GEqual(e1:Exp, e2:Exp)  not implemented (added by me)
         //   case ConstExp(l:Const)       done
         //   case VarExp(v:Var)           done
         //   case ParenExp(e:Exp)         done
         // }
-        case Plus(e1, e2)   => inferExp(e1) // we will assume that the infered type must be constrained to the left hand operand
-        case Minus(e1, e2)  => inferExp(e1)
-        case Mult(e1, e2)   => inferExp(e1)
-        case DEqual(e1, e2) => {
-            val (e1ty, e1k) = inferExp(e1)
-            val (e2ty, e2k) = inferExp(e2)
-            val k_union = e1k.union(e2k) + ((e1ty, e2ty)) // we will assume that e1 and e2 must be of the same type to be compared
-            (MonoType(BoolTy), k_union) // irregardless, the final result of a cond must be a boolean type
-        }
-        case LThan(e1, e2)  => {
-            val (e1ty, e1k) = inferExp(e1)
-            val (e2ty, e2k) = inferExp(e2)
-            val k_union = e1k.union(e2k) + ((e1ty, e2ty)) // we will assume that e1 and e2 must be of the same type to be compared
-            (MonoType(BoolTy), k_union) // irregardless, the final result of a cond must be a boolean type
-        }
+        case Plus(e1, e2)   => inferExp1_Exp2(e1)(e2)()
+        case Minus(e1, e2)  => inferExp1_Exp2(e1)(e2)()
+        case Mult(e1, e2)   => inferExp1_Exp2(e1)(e2)()
+        case Div(e1, e2)    => inferExp1_Exp2(e1)(e2)()
+        case DEqual(e1, e2) => inferExp1_Exp2(e1)(e2)(_ => MonoType(BoolTy))
+        case NEqual(e1, e2) => inferExp1_Exp2(e1)(e2)(_ => MonoType(BoolTy))
+        case LThan(e1, e2)  => inferExp1_Exp2(e1)(e2)(_ => MonoType(BoolTy))
+        case LEqual(e1, e2) => inferExp1_Exp2(e1)(e2)(_ => MonoType(BoolTy))
         case _ => (MonoType(IntTy), Set()) // fixme (leaving here as i have unimplemented stuff)
         // Lab 2 Task 2.3 end        
-    } 
+    }
+    // Helper for inferExp
+    def inferExp1_Exp2(e1:Exp)(e2:Exp)(expected_type: ExType => ExType = identity):(ExType, TypeConstrs) = {
+        val (e1ty, e1k) = inferExp(e1)
+        val (e2ty, e2k) = inferExp(e2)
+        val k_union = e1k.union(e2k) + ((e1ty, e2ty)) 
+        (expected_type(e1ty), k_union)
+    }
 
     /**
       * unification type class
