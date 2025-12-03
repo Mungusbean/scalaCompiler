@@ -31,8 +31,7 @@ object LivenessAnalysis {
       * @return
       */
     // Task 2.1 
-    def join(succs:List[AbstractState]):AbstractState = Set() // TODO: fixme 
-        // no succs means AbstractState = Set(), last label
+    def join(succs:List[AbstractState]):AbstractState = succs.foldLeft(Set.empty[String])(_ union _)
 
     
     type MonotoneFunction = AbstractEnv => Either[String, AbstractEnv]

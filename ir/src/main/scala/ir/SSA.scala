@@ -51,8 +51,29 @@ object SSA {
         // A list of pairs. Each pair consists of a label l and the set of variables that are modified in l 
         val labels_modded_vars:List[(Label, List[String])] = pa.map( li => modVars(li))
         // Task 1.2 TODO
-        val e:E = Map():E // TODO: fixme
-        val pa_with_phis:List[SSALabeledInstr] = Nil // TODO: fixme 
+           // Compute variable definitions: map from var name to list of labels where it's defined
+        val var_defs: Map[String, List[Label]] = labels_modded_vars.flatMap { case (l, vars) =>
+            vars.map(v => (v, l))
+        }.groupBy(_._1).map { case (v, pairs) => (v, pairs.map(_._2)) }
+ 
+        // Compute E: map from label to list of variables needing phi at that label
+        val e: E = var_defs.foldLeft(Map(): E) { case (acc, (variable, defs)) =>
+            val df_plus = dfPlus(dft, defs)
+            df_plus.foldLeft(acc) { (acc2, l) =>
+                acc2 + (l -> (acc2.getOrElse(l, Nil) :+ variable))
+            }
+        }
+
+        // Create pa_with_phis: for each labeled instr, add phi assignments based on e
+        val pa_with_phis: List[SSALabeledInstr] = pa.map { case (l, i) =>
+            val phis = e.getOrElse(l, Nil).map { variable =>
+                val preds = predecessors(g, l)
+                val operands = preds.map(pred => (pred, AVar(variable)))
+                PhiAssignment(Temp(AVar(variable)), operands, Temp(AVar(variable)))
+            }
+            (l, phis, i)
+        }
+
 
         val p = pa_with_phis.foldLeft(Map():P)((acc:P, li:SSALabeledInstr) => li match {
             case (l, phis, i) =>  acc + (l -> li)

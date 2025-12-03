@@ -15,7 +15,7 @@ object DF {
 
     enum DomTree {
         case Empty
-        case Node(l:Label, children:List[DomTree])
+        case Node(l:Label, children:List[DomTree])  
     }
 
     /*
@@ -166,7 +166,15 @@ object DF {
 
     // df local implementation from cytron's lemma 2
     // Task 1.1 TODO 
-    def dfLocal(x:Label, dt:DomTree, g:CFG):List[Label] = Nil // TODO: fixme
+    def dfLocal(x:Label, dt:DomTree, g:CFG):List[Label] = {
+        //find successor that does not strictly dominate
+    //successor is the descendant
+         val succs = successors(g, x)
+  // keep successors whose idom is NOT x
+        succs.filter(y => !isChildOf(y, x, dt))
+    }
+       
+    
 
     /**
       * Build dominance frontier table 
@@ -181,13 +189,18 @@ object DF {
         def go(acc:DFTable, x:Label):DFTable = {
             val df_local = dfLocal(x, dt, g)
             // Task 1.1 TODO 
-            def dfUp(u:Label):List[Label] = Nil // TODO: fixme
+            def dfUp(u:Label):List[Label] = {
+                 // DF(u) is already computed because we traverse in post-order
+                val df_u = acc.getOrElse(u, Nil)
+                df_u.filter(w => !isChildOf(w, x, dt))
+            }
             
             val df_up = childOf(x,dt).flatMap(u => dfUp(u))
             acc + (x -> (df_local ++ df_up))
         }
         postOrderTrav(dt).foldLeft(emptyDFT)(go)
     }
+        
 
 
     /**
