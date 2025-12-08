@@ -7,7 +7,8 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "org.scalameta" %% "munit" % "1.0.0" % Test,
     "org.scalatest" % "scalatest_3" % "3.2.10" % Test,
-    "org.scalatest" % "scalatest-funsuite_3" % "3.2.10" % Test
+    "org.scalatest" % "scalatest-funsuite_3" % "3.2.10" % Test,
+    "org.ow2.asm" % "asm" % "9.6"
   )
 )
 
@@ -76,9 +77,18 @@ lazy val interpreter = project
 
 // CLI (main entrypoint)
 lazy val cli = project
-  .in(file("cli")) // fixed!
+  .in(file("cli"))
   .settings(commonSettings, name := "cli")
-  .dependsOn(lexer, ast, parser)
+  .dependsOn(
+    generalUtils,
+    lexer,
+    parser,
+    ast,
+    semantic,
+    ir,
+    backend,
+    interpreter
+  )
 
 // Root aggregator
 lazy val root = project

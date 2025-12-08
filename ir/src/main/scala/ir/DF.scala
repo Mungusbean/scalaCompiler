@@ -136,12 +136,8 @@ object DF {
       * @return
       */
     def isChildOf(y:Label, x:Label, dt:DomTree):Boolean = childOf(x,dt).contains(y)
-    
-
 
     type DFTable = Map[Label, List[Label]] // maping label to its dominance frontier
-
-
 
     /**
       * 1. For each vertex v by traversing the dominator tree bottom up: 
@@ -168,13 +164,11 @@ object DF {
     // Task 1.1 TODO 
     def dfLocal(x:Label, dt:DomTree, g:CFG):List[Label] = {
         //find successor that does not strictly dominate
-    //successor is the descendant
-         val succs = successors(g, x)
-  // keep successors whose idom is NOT x
+        //successor is the descendant
+        val succs = successors(g, x)
+        // keep successors whose idom is NOT x
         succs.filter(y => !isChildOf(y, x, dt))
     }
-       
-    
 
     /**
       * Build dominance frontier table 
@@ -200,8 +194,6 @@ object DF {
         }
         postOrderTrav(dt).foldLeft(emptyDFT)(go)
     }
-        
-
 
     /**
       * compute the DF+ of a list of vertexes vs
@@ -221,5 +213,4 @@ object DF {
         }
         go(vs.toSet).toList
     }
-
 }

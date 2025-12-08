@@ -75,9 +75,32 @@ object LivenessAnalysis {
                 */
               // Task 2.2 
               // TODO Fix me: Some of the cases are missing here. 
-
-
+              // Plus
+              case (label, IPlus(Temp(AVar(t)), src1, src2)) => {
+                val joined_succs_states = joinSuccStates(label, acc)
+                Right(acc + (label -> (joined_succs_states - t union vars(src1).toSet union vars(src2).toSet)))
+              }
+              // Minus
+              case (label, IMinus(Temp(AVar(t)), src1, src2)) => {
+                val joined_succs_states = joinSuccStates(label, acc)
+                Right(acc + (label -> (joined_succs_states - t union vars(src1).toSet union vars(src2).toSet)))
+              }
               
+              case (label, IMult(Temp(AVar(t)), src1, src2)) => {
+                val joined_succs_states = joinSuccStates(label, acc)
+                Right(acc + (label -> (joined_succs_states - t union vars(src1).toSet union vars(src2).toSet)))
+              }
+
+              case (label, IDEqual(Temp(AVar(t)), src1, src2)) => {
+                val joined_succs_states = joinSuccStates(label, acc)
+                Right(acc + (label -> (joined_succs_states - t union vars(src1).toSet union vars(src2).toSet)))
+              }
+
+              case (label, ILThan(Temp(AVar(t)), src1, src2)) => {
+                val joined_succs_states = joinSuccStates(label, acc)
+                Right(acc + (label -> (joined_succs_states - t union vars(src1).toSet union vars(src2).toSet)))
+              }
+
               /**
                 * case l:r <- src:   s_l = join(s_l) \cup vars(src)
                 */

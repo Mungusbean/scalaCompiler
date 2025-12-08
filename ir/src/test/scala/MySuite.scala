@@ -349,7 +349,7 @@ class MMUpDownSuite extends funsuite.AnyFunSuite {
     }
 
     // ###############  TestSSA.scala added here ###########################
- test("testing buildSSA 1") {
+    test("testing buildSSA 1") {
         val pa = List(
             (1,IMove(Temp(AVar("x")),IntLit(0))), 
             (2,IMove(Temp(AVar("y")),IntLit(10))), 
