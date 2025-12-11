@@ -23,8 +23,8 @@ object Main {
             //   e.g. scala run -cp simp.jar -M sutd.compiler.Main -i fib.simp 2
             // """)
             println("""
-            USAGE: scala -cp ScalaCompiler.jar cli.Main <mode> source.simp [inputs]
-            USAGE: java -jar ScalaCompiler.jar -i source.simp 2
+            USAGE to compile: java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -c source.simp
+            USAGE to interpret: java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -i source.simp <input>
             """)
         } else {
             val flag = args(0)
@@ -58,11 +58,11 @@ object Main {
                     }
                     println("""
                     USAGE1: interpreter 
-                        scala run -cp simp_all.jar -M sutd.compiler.simp.Main -- -i source.simp <input>
-                    e.g. scala run simp_all.jar -M sutd.compiler.simp.Main -- -i fib.simp 2
+                         java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -i source.simp <input>
+                    e.g. java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -i examples/fib.simp 2
                     USAGE2: compiler
-                        scala jar simp_all.jar -M sutd.compiler.simp.Main -- -c source.simp
-                    e.g. scala jar simp_all.jar -M sutd.compiler.simp.Main --  -c fib.simp
+                         java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -c source.simp
+                    e.g. java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -c examples/fib.simp
                     """)
                 }
             }

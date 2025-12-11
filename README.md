@@ -42,9 +42,10 @@ scalaCompiler (Root)
 │       │   └───scala
 │       │       └───cli
 │       │           └───Main.scala
-│       └───test
-│           └───scala
-│               └───MySuite.scala
+│       ├───test
+│       │   └───scala
+│       │       └───MySuite.scala
+│       └───assembly.sbt
 │
 ├───generalUtils
 │   └───src
@@ -80,7 +81,7 @@ scalaCompiler (Root)
 │               ├───MySuite.scala
 │               └───SimpIntSuite.scala
 │
-├───ir
+├───ir // (Lab 3)
 │   └───src
 │       ├───main
 │       │   └───scala
@@ -94,7 +95,7 @@ scalaCompiler (Root)
 │       │           └───Util.scala
 │       └───test
 │           └───scala
-│               └───MySuite.scala
+│               └───MySuite.scala // (Lab 3 test cases)
 │
 ├───lexer // (Lab 1)
 │   └───src
@@ -119,18 +120,19 @@ scalaCompiler (Root)
 │           └───scala
 │               └───MySuite.scala
 │
-├───semantic // (Lab 2)
+├───semantic // (Lab 2 & lab 3)
 │   └───src
 │       ├───main
 │       │   └───scala
 │       │       └───semantic
-│       │           ├───LivenessAnalysis.scala
+│       │           ├───LivenessAnalysis.scala 
 │       │           ├───SignAnalysis.scala
 │       │           ├───TypeInf.scala
 │       │           └───Util.scala
 │       └───test //(Lab 2 test cases)
 │           └───scala
-│               └───MySuite.scala
+│               ├───MySuite.scala
+│               └───TestLivenessAnalysis.scala (Lab 3)
 ├───project
 ├───target
 ├───.gitignore
@@ -272,4 +274,28 @@ sbt test
 
 # Running the Project
 
-TBD
+Step 1. Compile files
+```
+sbt compile
+```
+
+Step 2. Assemble cli
+```
+sbt cli/assembly
+```
+
+Step 3. Run the compiler on a test file. Example simp program source code can be found in the example folder.
+```
+// USAGE1: interpreter 
+java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -i source.simp <input>
+// e.g. java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -i example/fib.simp 2
+
+// USAGE2: compiler
+java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -c example.simp
+// e.g. java -jar cli/target/scala-3.7.3/ScalaCompiler.jar -c example/fib.simp
+```
+
+Running a GeneratedClass.class file. After compiling using step 3's command on a simp program source code, it produces a .class file which can be ran with:
+```
+java GeneratedClass <input>
+```
